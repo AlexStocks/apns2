@@ -2,6 +2,7 @@
 // builder to make constructing notification payloads easier.
 package payload
 
+// import "fmt"
 import "encoding/json"
 
 // Payload represents a notification which holds the content that will be
