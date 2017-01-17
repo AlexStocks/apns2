@@ -34,11 +34,17 @@ type alert struct {
 	TitleLocKey  string   `json:"title-loc-key,omitempty"`
 }
 
+type Extra struct {
+	Type string `json:"type,omitempty"`
+	ID   string `json:"id,omitempty"`
+}
+
 // NewPayload returns a new Payload struct
 func NewPayload() *Payload {
 	return &Payload{
 		map[string]interface{}{
-			"aps": &aps{},
+			"aps":   &aps{},
+			"extra": &Extra{},
 		},
 	}
 }
@@ -250,6 +256,13 @@ func (p *Payload) Mdm(mdm string) *Payload {
 	return p
 }
 
+// OpenURL sets the open url on the payload.
+//
+//	{"aps":{}:"open_url": @url}
+func (p *Payload) OpenURL(url string) {
+	p.content["open_url"] = url
+}
+
 // ThreadID sets the aps thread id on the payload.
 // This is for the purpose of updating the contents of a View Controller in a
 // Notification Content app extension when a new notification arrives. If a
@@ -274,6 +287,15 @@ func (p *Payload) URLArgs(urlArgs []string) *Payload {
 	return p
 }
 
+// Extra sets the extra on the payload.
+//
+//	{"aps":{}:"extra": @extra}
+func (p *Payload) Extra(extra Extra) *Payload {
+	p.extra().ID = extra.ID
+	p.extra().Type = extra.Type
+	return p
+}
+
 // MarshalJSON returns the JSON encoded version of the Payload
 func (p *Payload) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.content)
@@ -281,6 +303,10 @@ func (p *Payload) MarshalJSON() ([]byte, error) {
 
 func (p *Payload) aps() *aps {
 	return p.content["aps"].(*aps)
+}
+
+func (p *Payload) extra() *Extra {
+	return p.content["extra"].(*Extra)
 }
 
 func (a *aps) alert() *alert {
