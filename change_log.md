@@ -10,4 +10,4 @@
 	>
     > 2 add client_manager.go:GetByCertFile to get client by certificate file
 	>
-	> 3 sync with 2017/01/22 github.com/sideshow/apn2 master branch(its lastest versioin v0.8)
+	> 3 sync with 2017/01/22 github.com/sideshow/apns2 master branch(its lastest versioin v0.8)

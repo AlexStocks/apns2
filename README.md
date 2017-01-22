@@ -2,7 +2,7 @@
 
 APNS/2 is a go package designed for simple, flexible and fast Apple Push Notifications on iOS, OSX and Safari using the new HTTP/2 Push provider API.
 
-[![Build Status](https://travis-ci.org/sideshow/apns2.svg?branch=master)](https://travis-ci.org/sideshow/apns2)  [![Coverage Status](https://coveralls.io/repos/sideshow/apns2/badge.svg?branch=master&service=github)](https://coveralls.io/github/sideshow/apns2?branch=master)  [![GoDoc](https://godoc.org/github.com/sideshow/apns2?status.svg)](https://godoc.org/github.com/sideshow/apns2)
+[![Build Status](https://travis-ci.org/AlexStocks/apns2.svg?branch=master)](https://travis-ci.org/AlexStocks/apns2)  [![Coverage Status](https://coveralls.io/repos/AlexStocks/apns2/badge.svg?branch=master&service=github)](https://coveralls.io/github/AlexStocks/apns2?branch=master)  [![GoDoc](https://godoc.org/github.com/AlexStocks/apns2?status.svg)](https://godoc.org/github.com/AlexStocks/apns2)
 
 ## Features
 
@@ -27,7 +27,7 @@ go get -u golang.org/x/crypto/pkcs12
 - Install apns2:
 
   ```sh
-go get -u github.com/sideshow/apns2
+go get -u github.com/AlexStocks/apns2
   ```
 
 ## Example
@@ -39,8 +39,8 @@ import (
   "log"
   "fmt"
 
-  "github.com/sideshow/apns2"
-  "github.com/sideshow/apns2/certificate"
+  "github.com/AlexStocks/apns2"
+  "github.com/AlexStocks/apns2/certificate"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func main() {
 
   notification := &apns2.Notification{}
   notification.DeviceToken = "11aa01229f15f0f0c52029d8cf8cd0aeaf2365fe4cebc4af26cd6d76b7919ef7"
-  notification.Topic = "com.sideshow.Apns2"
+  notification.Topic = "com.AlexStocks.Apns2"
   notification.Payload = []byte(`{"aps":{"alert":"Hello!"}}`) // See Payload section below
 
   client := apns2.NewClient(cert).Production()
@@ -73,7 +73,7 @@ At a minimum, a _Notification_ needs a _DeviceToken_, a _Topic_ and a _Payload_.
 ```go
 notification := &Notification{
   DeviceToken: "11aa01229f15f0f0c52029d8cf8cd0aeaf2365fe4cebc4af26cd6d76b7919ef7",
-  Topic: "com.sideshow.Apns2",
+  Topic: "com.AlexStocks.Apns2",
   Payload: []byte(`{"aps":{"alert":"Hello!"}}`),
 }
 ```
@@ -99,7 +99,7 @@ notification.Payload = payload
 client.Push(notification)
 ```
 
-Refer to the [payload](https://godoc.org/github.com/sideshow/apns2/payload) docs for more info.
+Refer to the [payload](https://godoc.org/github.com/AlexStocks/apns2/payload) docs for more info.
 
 ## Response, Error handling
 
@@ -126,7 +126,7 @@ if res.Sent() {
 
 ## Command line tool
 
-APNS/2 has a command line tool that can be installed with `go get github.com/sideshow/apns2/apns2`. Usage:
+APNS/2 has a command line tool that can be installed with `go get github.com/AlexStocks/apns2/apns2`. Usage:
 
 ```
 apns2 --help
