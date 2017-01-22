@@ -4,8 +4,16 @@ import (
 	"container/list"
 	"crypto/sha1"
 	"crypto/tls"
+	"errors"
+	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
+)
+
+import (
+	"github.com/AlexStocks/apns2/certificate"
+	Log "github.com/AlexStocks/log4go"
 )
 
 type managerItem struct {
@@ -30,6 +38,9 @@ type ClientManager struct {
 	// Factory is the function which constructs clients if not found in the
 	// manager.
 	Factory func(certificate tls.Certificate) *Client
+
+	// get tls.Certificate by certificate file
+	certDict map[string]tls.Certificate
 
 	cache map[[sha1.Size]byte]*list.Element
 	ll    *list.List
@@ -83,6 +94,48 @@ func (m *ClientManager) Add(client *Client) {
 	}
 }
 
+// AddByCertFile adds a Client to the manager by certificate file @file. You can use this to individually configure
+// Clients in the manager.
+// @file : certificate file
+// @pssword: @file's password
+// @useSandbox: development or not(release)
+func (m *ClientManager) AddByCertFile(file string, password string, useSandbox bool) error {
+	var (
+		err               error
+		ext               string
+		CertificatePemIos tls.Certificate
+		client            *Client
+	)
+
+	ext = filepath.Ext(file)
+	switch ext {
+	case ".p12":
+		CertificatePemIos, err = certificate.FromP12File(file, password)
+	case ".pem":
+		CertificatePemIos, err = certificate.FromPemFile(file, password)
+	default:
+		err = errors.New(fmt.Sprintf("wrong certificate key extension %s", ext))
+	}
+
+	if err != nil {
+		Log.Error("key:%s, Cert Error:%v", file, err)
+
+		return err
+	}
+
+	if useSandbox {
+		client = NewClient(CertificatePemIos).Development()
+	} else {
+		client = NewClient(CertificatePemIos).Production()
+	}
+	m.Add(client)
+	m.mu.Lock()
+	m.certDict[file] = CertificatePemIos
+	m.mu.Unlock()
+
+	return nil
+}
+
 // Get gets a Client from the manager. If a Client is not found in the manager
 // or if a Client has remained in the manager longer than MaxAge, Get will call
 // the ClientManager's Factory function, store the result in the manager if
@@ -118,6 +171,27 @@ func (m *ClientManager) Get(certificate tls.Certificate) *Client {
 	return c
 }
 
+// GetByCertFile gets a Client from the manager by its certificate file name. If @file's
+// client does not exist, the return client is nil. If a Client is notfound in the manager
+// or if a Client has remained in the manager longer than MaxAge, Get will call
+// the ClientManager's Factory function, store the result in the manager if
+// non-nil, and return it.
+func (m *ClientManager) GetByCertFile(file string) *Client {
+	var (
+		ok   bool
+		cert tls.Certificate
+	)
+
+	m.mu.Lock()
+	cert, ok = m.certDict[file]
+	m.mu.Unlock()
+	if !ok {
+		return nil
+	}
+
+	return m.Get(cert)
+}
+
 // Len returns the current size of the ClientManager.
 func (m *ClientManager) Len() int {
 	if m.cache == nil {
@@ -131,6 +205,7 @@ func (m *ClientManager) Len() int {
 func (m *ClientManager) initInternals() {
 	m.once.Do(func() {
 		m.cache = map[[sha1.Size]byte]*list.Element{}
+		m.certDict = map[string]tls.Certificate{}
 		m.ll = list.New()
 	})
 }
