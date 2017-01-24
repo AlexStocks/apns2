@@ -14,6 +14,11 @@ APNS/2 is a go package designed for simple, flexible and fast Apple Push Notific
 - Fast, modular & easy to use
 - Tested and working in APNs production environment
 
+## AlexStocks branch Features
+
+- Add/Get client by cert file
+- Reconnect to APNs server when http2 connection or request timeout
+
 ## Install
 
 - Make sure you have [Go](https://golang.org/doc/install) installed and have set your [GOPATH](https://golang.org/doc/code.html#GOPATH).
