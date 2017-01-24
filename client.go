@@ -32,7 +32,8 @@ var (
 	// HTTPClientTimeout specifies a time limit for requests made by the
 	// HTTPClient. The timeout includes connection time, any redirects,
 	// and reading the response body.
-	HTTPClientTimeout = 30 * time.Second
+	// HTTPClientTimeout = 30 * time.Second
+	HTTPClientTimeout = 3 * time.Second
 )
 
 // Client represents a connection with the APNs
@@ -76,6 +77,23 @@ func NewClient(certificate tls.Certificate) *Client {
 	}
 }
 
+func (c *Client) reconnect() {
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{c.Certificate},
+	}
+	if len(c.Certificate.Certificate) > 0 {
+		tlsConfig.BuildNameToCertificate()
+	}
+	transport := &http2.Transport{
+		TLSClientConfig: tlsConfig,
+		DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+			return tls.DialWithDialer(&net.Dialer{Timeout: TLSDialTimeout}, network, addr, cfg)
+		},
+	}
+
+	c.HTTPClient.Transport = transport
+}
+
 // Development sets the Client to use the APNs development push endpoint.
 func (c *Client) Development() *Client {
 	c.Host = HostDevelopment
@@ -105,7 +123,12 @@ func (c *Client) Push(n *Notification) (*Response, error) {
 	setHeaders(req, n)
 	httpRes, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, err
+		c.reconnect()
+		req, _ = http.NewRequest("POST", url, bytes.NewBuffer(payload))
+		setHeaders(req, n)
+		if httpRes, err = c.HTTPClient.Do(req); err != nil {
+			return nil, fmt.Errorf(fmt.Sprintf("after reconnect, c.HTTPClient.Do(req{%v}) = error{%v}", req, err))
+		}
 	}
 	defer httpRes.Body.Close()
 
@@ -115,7 +138,7 @@ func (c *Client) Push(n *Notification) (*Response, error) {
 
 	decoder := json.NewDecoder(httpRes.Body)
 	if err := decoder.Decode(&response); err != nil && err != io.EOF {
-		return &Response{}, err
+		return &Response{}, fmt.Errorf(fmt.Sprintf("json.Decode(response{%v}) = error{%v}", response, err))
 	}
 	return response, nil
 }
