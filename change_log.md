@@ -1,13 +1,16 @@
 # apns2 #
 ---
-*anpn2 push package based on github.com/sideshow/apns2*
+*sync with sideshow/apns2 master branch*
 
 ## dev list ##
 ---
 
-- 2017/01/20
-    > 1 add client_manager.go:AddByCertFile to add client by certificate file
+- 2017/01/24
+    > 1 add client.go:reconnect to reconnect APNs server when connection or http2 request timeout;
 	>
-    > 2 add client_manager.go:GetByCertFile to get client by certificate file
+	> 2 sync with master;
+
+- 2017/01/22
+    > 1 add client_manager.go:(ClientManager)AddByCertFile to add Client by cert file;
 	>
-	> 3 sync with 2017/01/22 github.com/sideshow/apns2 master branch(its lastest versioin v0.8)
+    > 2 add client_manager.go:(ClientManager)GetByCertFile to get Client by cert file;
