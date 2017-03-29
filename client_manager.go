@@ -22,6 +22,11 @@ type managerItem struct {
 	lastUsed time.Time
 }
 
+type certEnv struct {
+	cert       tls.Certificate
+	useSandbox bool
+}
+
 // ClientManager is a way to manage multiple connections to the APNs.
 type ClientManager struct {
 	// MaxSize is the maximum number of clients allowed in the manager. When
@@ -40,7 +45,7 @@ type ClientManager struct {
 	Factory func(certificate tls.Certificate) *Client
 
 	// get tls.Certificate by certificate file
-	certDict map[string]tls.Certificate
+	certDict map[string]certEnv
 
 	cache map[[sha1.Size]byte]*list.Element
 	ll    *list.List
@@ -130,7 +135,7 @@ func (m *ClientManager) AddByCertFile(file string, password string, useSandbox b
 	}
 	m.Add(client)
 	m.mu.Lock()
-	m.certDict[file] = CertificatePemIos
+	m.certDict[file] = certEnv{CertificatePemIos, useSandbox}
 	m.mu.Unlock()
 
 	return nil
@@ -150,20 +155,60 @@ func (m *ClientManager) Get(certificate tls.Certificate) *Client {
 	if ele, hit := m.cache[key]; hit {
 		item := ele.Value.(*managerItem)
 		if m.MaxAge != 0 && item.lastUsed.Before(now.Add(-m.MaxAge)) {
-			c := m.Factory(certificate)
-			if c == nil {
-				return nil
-			}
-			item.client = c
+			item.client.reconnect()
+			// c := m.Factory(certificate)
+			// if c == nil {
+			// 	return nil
+			// }
+			// item.client = c
 		}
 		item.lastUsed = now
 		m.ll.MoveToFront(ele)
 		return item.client
 	}
 
+	// !!! @c's Host is "https://api.development.push.apple.com"
 	c := m.Factory(certificate)
 	if c == nil {
 		return nil
+	}
+	m.mu.Unlock()
+	m.Add(c)
+	m.mu.Lock()
+	return c
+}
+
+func (m *ClientManager) GetByCertEnv(ce certEnv) *Client {
+	m.initInternals()
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	key := cacheKey(ce.cert)
+	now := time.Now()
+	if ele, hit := m.cache[key]; hit {
+		item := ele.Value.(*managerItem)
+		if m.MaxAge != 0 && item.lastUsed.Before(now.Add(-m.MaxAge)) {
+			item.client.reconnect()
+			// c := m.Factory(certificate)
+			// if c == nil {
+			// 	return nil
+			// }
+			// item.client = c
+		}
+		item.lastUsed = now
+		m.ll.MoveToFront(ele)
+		return item.client
+	}
+
+	// !!! @c's Host is "https://api.development.push.apple.com"
+	c := m.Factory(ce.cert)
+	if c == nil {
+		return nil
+	}
+	if ce.useSandbox {
+		c = c.Development()
+	} else {
+		c = c.Production()
 	}
 	m.mu.Unlock()
 	m.Add(c)
@@ -178,18 +223,18 @@ func (m *ClientManager) Get(certificate tls.Certificate) *Client {
 // non-nil, and return it.
 func (m *ClientManager) GetByCertFile(file string) *Client {
 	var (
-		ok   bool
-		cert tls.Certificate
+		ok bool
+		ce certEnv
 	)
 
 	m.mu.Lock()
-	cert, ok = m.certDict[file]
+	ce, ok = m.certDict[file]
 	m.mu.Unlock()
 	if !ok {
 		return nil
 	}
 
-	return m.Get(cert)
+	return m.GetByCertEnv(ce)
 }
 
 // Len returns the current size of the ClientManager.
@@ -205,7 +250,7 @@ func (m *ClientManager) Len() int {
 func (m *ClientManager) initInternals() {
 	m.once.Do(func() {
 		m.cache = map[[sha1.Size]byte]*list.Element{}
-		m.certDict = map[string]tls.Certificate{}
+		m.certDict = map[string]certEnv{}
 		m.ll = list.New()
 	})
 }
